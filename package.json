@@ -3,21 +3,53 @@
   "displayName": "godot-comment-align",
   "description": "Align GDScript comments in Go style after formatting",
   "version": "0.0.1",
+  "author": "Lao Feng",
+  "publisher": "LaoFeng",
   "engines": {
-    "vscode": "^1.136.0"
+    "vscode": "^1.75.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lao-FengYX/vscode-godot-comment-align"
+  },
+  "bugs": {
+    "email": "laofyx@163.com",
+    "url": "https://github.com/lao-FengYX/vscode-godot-comment-align/issues"
   },
   "categories": [
-    "Other"
+    "Formatters"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:gdscript"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "godot-comment-align.helloWorld",
-        "title": "Hello World"
+        "command": "godot-comment-align.formatAndAlign",
+        "title": "Format Document with Comment Align",
+        "category": "Godot"
       }
-    ]
+    ],
+    "keybindings": [
+      {
+        "command": "godot-comment-align.formatAndAlign",
+        "key": "Shift+Alt+F",
+        "when": "editorTextFocus && editorLangId == gdscript"
+      }
+    ],
+    "configuration": {
+      "title": "Godot Comment Align",
+      "properties": {
+        "godotCommentAlign.commentIndentSize": {
+          "type": "integer",
+          "default": 4,
+          "minimum": 1,
+          "maximum": 8,
+          "description": "Number of spaces to use as indentation before the '#' symbol in comments"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run compile",

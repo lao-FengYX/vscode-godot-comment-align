@@ -1,26 +1,23 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from 'vscode'
+import { registerCommands } from './core/register'
+import { config } from './utils/config'
+import { logger } from './utils/logger'
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+  // ===== 初始化日志 =====
+  logger.initialize()
+  config.initialize()
+  // 显示日志面板
+  logger.show()
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "godot-comment-align" is now active!');
+  // ===== 注册命令 =====
+  const command = registerCommands(context)
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('godot-comment-align.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from godot-comment-align!');
-	});
-
-	context.subscriptions.push(disposable);
+  context.subscriptions.push(command)
+  context.subscriptions.push(logger)
+  context.subscriptions.push(config)
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  logger.info('Godot Comment Align plugin deactivated')
+}
