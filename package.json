@@ -19,6 +19,13 @@
   "categories": [
     "Formatters"
   ],
+  "license": "MIT",
+  "keywords": [
+    "gdscript",
+    "comment-align",
+    "godot",
+    "format"
+  ],
   "activationEvents": [
     "onLanguage:gdscript"
   ],
