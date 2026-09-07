@@ -7,11 +7,16 @@ interface IConfig {
    * 注释缩进
    */
   commentIndentSize: number
+  /**
+   * 缩进类型
+   */
+  indentType: 'tab' | 'space'
 }
 
 // 默认值
 const DEFAULT_CONFIG: IConfig = {
-  commentIndentSize: 4
+  commentIndentSize: 4,
+  indentType: 'tab',
 }
 
 export class Config {

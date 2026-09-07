@@ -47,6 +47,15 @@
           "minimum": 1,
           "maximum": 8,
           "description": "Number of spaces to use as indentation before the '#' symbol in comments"
+        },
+        "godotCommentAlign.indentType": {
+          "type": "string",
+          "default": "tab",
+          "enum": [
+            "tab",
+            "space"
+          ],
+          "description": "Indent type to use for comments"
         }
       }
     }
@@ -60,14 +69,14 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.75.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "24.x",
-    "typescript-eslint": "^8.61.1",
+    "@types/vscode": "1.75.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0",
     "eslint": "^10.5.0",
     "typescript": "^6.0.3",
-    "@vscode/test-cli": "^0.0.15",
-    "@vscode/test-electron": "^3.0.0"
+    "typescript-eslint": "^8.61.1"
   },
   "overrides": {
     "diff": "^8.0.4",

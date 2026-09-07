@@ -48,7 +48,9 @@ export const registerCommands = (context: vscode.ExtensionContext) => {
       // ========== 第三步：执行注释对齐 ==========
       logger.info('Step 3: Executing comment alignment')
       const alignStartTime = Date.now()
-      await alignComments(newEditor)
+
+      await alignCommentsByParagraph(newEditor)
+
       const alignTime = Date.now() - alignStartTime
       logger.info(`  ✅ Comment alignment completed in ${alignTime}ms`)
 
@@ -62,10 +64,10 @@ export const registerCommands = (context: vscode.ExtensionContext) => {
 }
 
 /**
- * 核心：对齐注释
+ * 核心：按空行分段对齐注释
  */
-const alignComments = async (editor: vscode.TextEditor) => {
-  logger.info('🔍 Starting comment alignment analysis')
+const alignCommentsByParagraph = async (editor: vscode.TextEditor) => {
+  logger.info('🔍 Starting comment alignment analysis (by paragraph)')
 
   const document = editor.document
   const text = document.getText()
@@ -74,89 +76,78 @@ const alignComments = async (editor: vscode.TextEditor) => {
 
   logger.debug(`  Document has ${lines.length} lines`)
 
-  // ===== 读取配置：缩进大小 =====
+  // ===== 读取配置（预计算不变值） =====
   const indentSize = config.get<number>('commentIndentSize')
-  logger.debug(`  Using indent size: ${indentSize}`)
+  const indentType = config.get<'space' | 'tab'>('indentType')
+  const indentStr = (indentType === 'tab' ? '\t' : ' ').repeat(indentSize)
+  const commentRegex = /(.*?)\s*#\s*(.*)$/
 
-  // ===== 1. 收集所有注释行 =====
-  logger.info('Step 1: Collecting comment lines')
-  const commentData: { line: number; comment: string; content: string; indent: number }[] = []
+  logger.debug(`  Using indent: ${indentType} x ${indentSize}`)
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const match = line.match(/(.*?)\s*#\s*(.*)$/)
-    if (match) {
-      const content = match[1] || ''
-      const comment = match[2] || ''
-
-      // 注释行 或 空行
-      if (content.trim() === '') continue
-      commentData.push({
-        line: i,
-        comment: comment,
-        content: content,
-        indent: match[1].length || 0
-      })
-    }
-  }
-
-  if (!commentData.length) return
-
-  // ===== 2. 按连续行分组 =====
-  logger.info('Step 2: Grouping consecutive comment lines')
-  const groups: Map<number, typeof commentData> = new Map()
-  let prevLine = commentData[0].line
-
-  for (let i = 0; i < commentData.length; i++) {
-    const cd = commentData[i]
-
-    if (groups.has(prevLine)) {
-      groups.get(prevLine)!.push(cd)
-    } else {
-      groups.set(prevLine, [cd])
-    }
-
-    const nextCd = i + 1 < commentData.length ? commentData[i + 1] : null
-    if (nextCd && nextCd.line !== cd.line + 1) {
-      prevLine = nextCd.line
-    }
-  }
-
-  // ===== 3. 对每组进行对齐 =====
-  logger.info('Step 3: Calculating alignment positions')
+  // ===== 单次遍历：按空行分割段落，同时收集注释行 =====
+  logger.info('Step 1: Scanning paragraphs and collecting comments in single pass')
   const edits: vscode.TextEdit[] = []
 
-  groups.forEach((g, idx) => {
-    logger.debug(`  Processing group ${idx + 1}: ${g.length} comments`)
+  // 当前段落内的注释数据
+  let paraCommentData: { line: number; comment: string; content: string; rawLine: string }[] = []
+  let paraStart = 0
 
-    // 计算该组中 # 后面第一个非空格字符的最大列位置
-    const maxStart = Math.max(0, ...g.map((cd) => cd.content.length))
+  const flushParagraph = (paraEnd: number) => {
+    if (paraCommentData.length < 2) {
+      logger.debug(`  Paragraph [${paraStart}-${paraEnd}]: skipped`)
+      paraCommentData = []
+      return
+    }
 
-    logger.debug(`  Group ${idx + 1} target alignment column: ${maxStart}`)
+    logger.debug(
+      `  Paragraph [${paraStart}-${paraEnd}]: ${paraCommentData.length} comments to align`
+    )
 
-    // 对组内每一行生成编辑
-    let editCount = 0
-    for (const cd of g) {
+    // 计算段落内代码内容的最大宽度
+    const maxStart = Math.max(0, ...paraCommentData.map((cd) => cd.content.length))
+
+    for (const cd of paraCommentData) {
+      // + 1 填充内容宽度，确保与原代码有间隔
       const spacesToAdd = maxStart - cd.content.length + 1
-      const spaceStr = ' '.repeat(spacesToAdd)
-      // 使用配置的缩进
-      const indent = '\t'.repeat(indentSize)
-      const newLine = cd.content + spaceStr + indent + '# ' + cd.comment
+      // 新行内容：代码内容 + 空格 + 缩进 + 注释
+      const newLine = cd.content + ' '.repeat(spacesToAdd) + indentStr + '# ' + cd.comment
 
-      if (newLine !== lines[cd.line]) {
-        const range = new vscode.Range(cd.line, 0, cd.line, newLine.length)
-        edits.push(vscode.TextEdit.replace(range, newLine))
-        editCount++
-        logger.debug(`  Line ${cd.line}: adding ${spacesToAdd} spaces`)
+      if (newLine !== cd.rawLine) {
+        edits.push(
+          vscode.TextEdit.replace(new vscode.Range(cd.line, 0, cd.line, cd.rawLine.length), newLine)
+        )
       }
     }
 
-    logger.info(`  Group ${idx + 1}: generated ${editCount} edits`)
-  })
+    paraCommentData = []
+  }
 
-  // ===== 4. 应用所有编辑 =====
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    if (line.trim() === '') {
+      // 空行：结束当前段落
+      flushParagraph(i - 1)
+      paraStart = i + 1
+      continue
+    }
+
+    const match = line.match(commentRegex)
+    if (match) {
+      const content = match[1] || ''
+      const comment = match[2] || ''
+      // 跳过纯注释行（# 前没有代码内容）
+      if (content.trim() !== '') {
+        paraCommentData.push({ line: i, comment, content, rawLine: line })
+      }
+    }
+  }
+  // 处理最后一段
+  flushParagraph(lines.length - 1)
+
+  // ===== 2. 应用所有编辑 =====
   if (edits.length > 0) {
-    logger.info(`Step 4: Applying ${edits.length} edits to document`)
+    logger.info(`Step 2: Applying ${edits.length} edits to document`)
     const workspaceEdit = new vscode.WorkspaceEdit()
     workspaceEdit.set(document.uri, edits)
     await vscode.workspace.applyEdit(workspaceEdit)
