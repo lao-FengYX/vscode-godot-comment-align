@@ -49,7 +49,7 @@ This extension contributes the following setting:
 
 | Setting                               | Default | Description                                                     |
 | ------------------------------------- | ------- | --------------------------------------------------------------- |
-| `godotCommentAlign.commentIndentSize` | `4`     | Number of `tabs` before the `#` symbol in comments (range: 1-8) |
+| `godotCommentAlign.commentIndentSize` | `4`     | Number of `tabs` or `spaces` before the `#` symbol in comments (range: 1-99) |
 
 ## Keybindings
 
