@@ -4,7 +4,7 @@ All notable changes to the "godot-comment-align" extension will be documented in
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [0.0.1] - 2025-01-06
+## [0.0.1] - 2026-09-07
 
 ### Added
 
@@ -15,3 +15,4 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Configurable comment indent size (`godotCommentAlign.commentIndentSize`)
 - Output channel logging for debugging
 - Keybinding `Shift+Alt+F` for GDScript files
+- Support for tabs in comment indent (`godotCommentAlign.indentType`)
